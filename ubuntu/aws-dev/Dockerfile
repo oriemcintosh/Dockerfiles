@@ -29,9 +29,10 @@ RUN apt install wget -y
 # Install zsh
 RUN apt install zsh -y
 
-# Install Python3 and pip
+# Install Python3, pip, and Python3-venv
 RUN apt install python3 -y
 RUN apt install python3-pip -y
+RUN apt install python3-venv -y
 
 # Install oh-my-zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
