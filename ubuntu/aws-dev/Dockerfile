@@ -62,8 +62,9 @@ RUN git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTO
 WORKDIR /root
 
 # Configure AWS CLI Command Completion
-RUN echo '\n#### AWS CLI Command Completion Helper ####\nexport PATH=/usr/local/bin/:$PATH' >> .zshrc
+RUN echo '\n#### AWS CLI Command Completion Helper ####\nexport PATH=/usr/local/bin:$PATH' >> .zshrc
 RUN echo 'autoload bashcompinit && bashcompinit\nautoload -Uz compinit && compinit' >> .zshrc
+RUN echo "complete -C '/usr/local/bin/aws_completer' aws" >> .zshrc
 
 # Update .zshrc file for PowerLevel10k
 RUN sed -i -e 's|ZSH_THEME="robbyrussell"|ZSH_THEME="powerlevel10k/powerlevel10k"|g' .zshrc
