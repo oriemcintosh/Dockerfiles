@@ -99,5 +99,8 @@ RUN . /home/aws-dev/.zshrc \
 ENV SHELL=/usr/bin/zsh
 RUN curl -fsSL https://get.pnpm.io/install.sh | zsh -
 
+# Change back to Root user
+USER root
+
 # Change Working Directory to aws-dev home
-WORKDIR /home/aws-dev/
+WORKDIR /home
