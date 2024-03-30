@@ -1,15 +1,15 @@
 # Node-base Dockerfile for AWS Development
 
-FROM node:latest
+FROM node:lts-alpine
 
 # Run package manager updates
-RUN apt update
+RUN apk update
 
 # Install missing tools
-RUN apt install vim jq python3-pip python3-venv -y
+RUN apk add vim jq python3 curl wget
 
 # Run upgrade on packages
-RUN apt upgrade -y
+RUN apk upgrade
 
 # Create downloads directory
 RUN mkdir /downloads
