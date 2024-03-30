@@ -2,14 +2,19 @@
 
 FROM node:latest
 
+# Run package manager updates
 RUN apt update
 
+# Install missing tools
 RUN apt install vim jq python3-pip python3-venv -y
 
+# Run upgrade on packages
 RUN apt upgrade -y
 
+# Create downloads directory
 RUN mkdir /downloads
 
+# Change working directory
 WORKDIR /downloads
 
 # Install AWS CLI
