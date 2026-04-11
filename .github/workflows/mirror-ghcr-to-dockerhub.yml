@@ -1,0 +1,46 @@
+name: Mirror GHCR → Docker Hub
+
+on:
+  schedule:
+    - cron: '0 8 * * 0' # weekly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU / buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Mirror images from GHCR to Docker Hub
+        env:
+          GHCR_IMAGE: ${{ secrets.GHCR_IMAGE }}         # e.g. ghcr.io/org/image
+          DOCKERHUB_IMAGE: ${{ secrets.DOCKERHUB_REPO }} # e.g. dockerhubuser/repo
+          TAGS: "latest ${{ github.sha }}"
+        run: |
+          set -euo pipefail
+          echo "GHCR_IMAGE=$GHCR_IMAGE"
+          echo "DOCKERHUB_IMAGE=$DOCKERHUB_IMAGE"
+          for tag in $TAGS; do
+            echo "Mirroring tag: $tag"
+            docker pull ${GHCR_IMAGE}:$tag
+            docker tag ${GHCR_IMAGE}:$tag ${DOCKERHUB_IMAGE}:$tag
+            docker push ${DOCKERHUB_IMAGE}:$tag
+          done
