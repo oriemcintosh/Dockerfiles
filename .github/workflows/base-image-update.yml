@@ -53,9 +53,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b $BRANCH
-          sed -E "s/@sha256:[a-f0-9]+/@sha256:${REMOTE_DIGEST}/g" -i ubuntu/cloud-dev/Dockerfile || true
+          sed -E "s/@sha256:[a-f0-9]+/@sha256:${REMOTE_DIGEST}/g" -i ubuntu/cloud-dev/Dockerfile
+          if git diff --quiet -- ubuntu/cloud-dev/Dockerfile; then
+            echo "Expected Dockerfile digest update, but no change was made"
+            exit 1
+          fi
           git add ubuntu/cloud-dev/Dockerfile
-          git commit -m "chore: update base image digest to ${REMOTE_DIGEST}" || true
+          git commit -m "chore: update base image digest to ${REMOTE_DIGEST}"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git push --set-upstream origin $BRANCH
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
