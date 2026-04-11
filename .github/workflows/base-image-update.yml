@@ -29,7 +29,7 @@ jobs:
 
       - name: Extract current digest from Dockerfile
         run: |
-          CURRENT_DIGEST=$(grep -o '@sha256:[a-f0-9]\+' ubuntu/cloud-dev/Dockerfile | head -1 | sed 's/@sha256://')
+          CURRENT_DIGEST=$(grep -o '@sha256:[a-f0-9]\+' ubuntu/cloud-dev/Dockerfile | head -1 | sed 's/^@//')
           echo "CURRENT_DIGEST=$CURRENT_DIGEST" >> $GITHUB_ENV
 
       - name: Check for changes
