@@ -42,8 +42,14 @@ RUN RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubuserc
 # Run upgrades
 RUN apt upgrade -y
 
-# Install Node.js LTS (system-wide) so pnpm and npm work without nvm
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+# Install Node.js LTS (system-wide) using official NodeSource GPG key and apt repository
+RUN apt install -y ca-certificates gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+       | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+       > /etc/apt/sources.list.d/nodesource.list \
+    && apt update \
     && apt install -y nodejs
 
 # Make Downloads Folder
@@ -72,8 +78,16 @@ RUN case "$TARGETARCH" in \
         && unzip "aws-sam-cli-linux-${sam_arch}.zip" -d sam-installation \
         && ./sam-installation/install
 
-# Install Azure CLI
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+# Install Azure CLI using official Microsoft GPG key and apt repository
+RUN apt install -y lsb-release \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+       | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg \
+    && chmod go+r /etc/apt/keyrings/microsoft.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" \
+       > /etc/apt/sources.list.d/azure-cli.list \
+    && apt update \
+    && apt install -y azure-cli
 
 # Install Helm
 RUN case "$TARGETARCH" in \
@@ -134,6 +148,22 @@ RUN mkdir /home/cloud-dev/downloads; chown cloud-dev:cloud-dev /home/cloud-dev/d
 RUN cp -r .zshrc /home/cloud-dev; chown cloud-dev:cloud-dev /home/cloud-dev/.zshrc
 RUN cp -r .oh-my-zsh /home/cloud-dev; chown -R cloud-dev:cloud-dev /home/cloud-dev/.oh-my-zsh
 
+# Install uv from pinned release with hardcoded checksum verification (system-wide)
+RUN UV_VERSION="0.6.14" \
+    && case "$TARGETARCH" in \
+        amd64) uv_arch="x86_64" ; uv_sha256="0aaf451c391d3913823bfb8ed354b446dcfd0553a32ed8266611e4181c61fd51" ;; \
+        arm64) uv_arch="aarch64" ; uv_sha256="ea25597354af186bdd55aee0de431e16d45d82951a4f41f065a8e4dc27885265" ;; \
+        *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;; \
+    esac \
+    && curl -fsSL "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${uv_arch}-unknown-linux-gnu.tar.gz" \
+       -o /tmp/uv.tar.gz \
+    && echo "${uv_sha256}  /tmp/uv.tar.gz" | sha256sum -c - \
+    && tar -xzf /tmp/uv.tar.gz -C /tmp \
+    && mv "/tmp/uv-${uv_arch}-unknown-linux-gnu/uv" /usr/local/bin/uv \
+    && mv "/tmp/uv-${uv_arch}-unknown-linux-gnu/uvx" /usr/local/bin/uvx \
+    && chmod +x /usr/local/bin/uv /usr/local/bin/uvx \
+    && rm -rf /tmp/uv.tar.gz "/tmp/uv-${uv_arch}-unknown-linux-gnu"
+
 # Run the following as cloud-dev user
 USER cloud-dev
 
@@ -159,9 +189,6 @@ RUN pnpm env use --global lts
 SHELL ["/usr/bin/zsh", "-c"]
 RUN . /home/cloud-dev/.zshrc \
     && npm install -g aws-cdk
-
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Start the container as cloud-dev
 USER cloud-dev
