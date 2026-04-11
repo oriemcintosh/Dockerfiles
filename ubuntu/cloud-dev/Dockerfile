@@ -132,7 +132,7 @@ RUN echo '\n#### Run zsh ####\nzsh' >> .bashrc
 RUN useradd -ms /bin/zsh cloud-dev
 RUN mkdir /home/cloud-dev/downloads; chown cloud-dev:cloud-dev /home/cloud-dev/downloads
 RUN cp -r .zshrc /home/cloud-dev; chown cloud-dev:cloud-dev /home/cloud-dev/.zshrc
-RUN cp -r .oh-my-zsh /home/cloud-dev; chown cloud-dev:cloud-dev /home/cloud-dev/.zshrc
+RUN cp -r .oh-my-zsh /home/cloud-dev; chown -R cloud-dev:cloud-dev /home/cloud-dev/.oh-my-zsh
 
 # Run the following as cloud-dev user
 USER cloud-dev
