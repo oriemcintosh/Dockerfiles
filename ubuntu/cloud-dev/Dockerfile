@@ -37,7 +37,7 @@ RUN apt install python3-pip -y
 RUN apt install python3-venv -y
 
 # Install oh-my-zsh
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+RUN RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 # Run upgrades
 RUN apt upgrade -y
