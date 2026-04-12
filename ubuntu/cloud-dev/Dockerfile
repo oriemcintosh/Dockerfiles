@@ -78,16 +78,8 @@ RUN case "$TARGETARCH" in \
         && unzip "aws-sam-cli-linux-${sam_arch}.zip" -d sam-installation \
         && ./sam-installation/install
 
-# Install Azure CLI using official Microsoft GPG key and apt repository
-RUN apt install -y lsb-release \
-    && mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
-       | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg \
-    && chmod go+r /etc/apt/keyrings/microsoft.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" \
-       > /etc/apt/sources.list.d/azure-cli.list \
-    && apt update \
-    && apt install -y azure-cli
+# Install Azure CLI (use Microsoft's universal install script to avoid distro repo issues)
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Install Helm
 RUN case "$TARGETARCH" in \
@@ -109,6 +101,23 @@ RUN case "$TARGETARCH" in \
         esac \
         && curl -fsSL "https://dl.k8s.io/release/v1.31.2/bin/linux/${kubectl_arch}/kubectl" -o /usr/local/bin/kubectl \
         && chmod +x /usr/local/bin/kubectl
+
+# Install Terraform and Terragrunt (latest releases)
+RUN case "$TARGETARCH" in \
+            amd64) tf_arch="amd64" ;; \
+            arm64) tf_arch="arm64" ;; \
+            *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;; \
+        esac \
+        && tf_version="$(curl -fsSL https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r .current_version)" \
+        && echo "Installing terraform ${tf_version} for ${tf_arch}" \
+        && curl -fsSL "https://releases.hashicorp.com/terraform/${tf_version}/terraform_${tf_version}_linux_${tf_arch}.zip" -o /tmp/terraform.zip \
+        && unzip /tmp/terraform.zip -d /usr/local/bin \
+        && chmod +x /usr/local/bin/terraform \
+        && rm -f /tmp/terraform.zip \
+        && tg_version="$(curl -fsSL https://api.github.com/repos/gruntwork-io/terragrunt/releases/latest | jq -r .tag_name | sed 's/^v//')" \
+        && echo "Installing terragrunt ${tg_version} for ${tf_arch}" \
+        && curl -fsSL -L "https://github.com/gruntwork-io/terragrunt/releases/download/v${tg_version}/terragrunt_linux_${tf_arch}" -o /usr/local/bin/terragrunt \
+        && chmod +x /usr/local/bin/terragrunt
 
 # Install latest Go at build time from go.dev
 RUN case "$TARGETARCH" in \
