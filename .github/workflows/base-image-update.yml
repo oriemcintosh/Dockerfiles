@@ -90,4 +90,4 @@ jobs:
         run: |
           docker buildx build --platform linux/amd64 -t temp-check:latest -f ubuntu/cloud-dev/Dockerfile --load .
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.43.1
-          trivy image --exit-code 1 --severity HIGH,CRITICAL temp-check:latest || true
+          trivy image --exit-code 1 --severity HIGH,CRITICAL temp-check:latest
