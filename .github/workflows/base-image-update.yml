@@ -1,0 +1,93 @@
+name: Base image check and update
+
+on:
+  schedule:
+    - cron: '0 6 * * 0' # weekly (adjust as needed)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Determine remote digest
+        run: |
+          set -e
+          IMAGE=ubuntu:resolute-20260404
+          echo "Inspecting manifest list for $IMAGE"
+          REMOTE_DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{json .}}' | grep -o '"Digest":"sha256:[a-f0-9]\+"' | head -1 | cut -d'"' -f4)
+          if [ -z "$REMOTE_DIGEST" ]; then
+            echo "Failed to determine remote manifest-list digest for $IMAGE"
+            exit 1
+          fi
+          echo "REMOTE_DIGEST=$REMOTE_DIGEST" >> $GITHUB_ENV
+
+      - name: Extract current digest from Dockerfile
+        run: |
+          CURRENT_DIGEST=$(grep -o '@sha256:[a-f0-9]\+' ubuntu/cloud-dev/Dockerfile | head -1 | sed 's/^@//')
+          echo "CURRENT_DIGEST=$CURRENT_DIGEST" >> $GITHUB_ENV
+
+      - name: Check for changes
+        id: check
+        run: |
+          if [ "$REMOTE_DIGEST" = "$CURRENT_DIGEST" ]; then
+            echo "No update needed"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Update available: $REMOTE_DIGEST"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create branch and update Dockerfile
+        if: steps.check.outputs.changed == 'true'
+        env:
+          REMOTE_DIGEST: ${{ env.REMOTE_DIGEST }}
+        run: |
+          set -e
+          BRANCH=update/base-image-digest-$(date +%Y%m%d-%H%M%S)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b $BRANCH
+          sed -E "s/@sha256:[a-f0-9]+/@sha256:${REMOTE_DIGEST}/g" -i ubuntu/cloud-dev/Dockerfile
+          if git diff --quiet -- ubuntu/cloud-dev/Dockerfile; then
+            echo "Expected Dockerfile digest update, but no change was made"
+            exit 1
+          fi
+          git add ubuntu/cloud-dev/Dockerfile
+          git commit -m "chore: update base image digest to ${REMOTE_DIGEST}"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push --set-upstream origin $BRANCH
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Create Pull Request
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const branch = process.env.BRANCH
+            const digest = process.env.REMOTE_DIGEST
+            const title = `chore: update base image digest (${digest.slice(0,12)})`
+            const body = `Automated update of base image digest to ${digest}\n\nThis PR was opened by the base-image check workflow.`
+            await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head: branch,
+              base: 'main',
+              body,
+            })
+
+      - name: Build and scan image (optional)
+        run: |
+          docker buildx build --platform linux/amd64 -t temp-check:latest -f ubuntu/cloud-dev/Dockerfile --load .
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.43.1
+          trivy image --exit-code 1 --severity HIGH,CRITICAL temp-check:latest
