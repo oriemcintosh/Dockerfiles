@@ -21,10 +21,14 @@ jobs:
 
       - name: Determine remote digest
         run: |
+          set -e
           IMAGE=ubuntu:resolute-20260404
-          echo "Pulling $IMAGE"
-          docker pull $IMAGE
-          REMOTE_DIGEST=$(docker image inspect --format='{{index .RepoDigests 0}}' $IMAGE | cut -d'@' -f2)
+          echo "Inspecting manifest list for $IMAGE"
+          REMOTE_DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{json .}}' | grep -o '"Digest":"sha256:[a-f0-9]\+"' | head -1 | cut -d'"' -f4)
+          if [ -z "$REMOTE_DIGEST" ]; then
+            echo "Failed to determine remote manifest-list digest for $IMAGE"
+            exit 1
+          fi
           echo "REMOTE_DIGEST=$REMOTE_DIGEST" >> $GITHUB_ENV
 
       - name: Extract current digest from Dockerfile
