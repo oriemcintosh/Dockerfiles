@@ -56,17 +56,19 @@ RUN case "$TARGETARCH" in \
         esac \
         && curl "https://awscli.amazonaws.com/awscli-exe-linux-${aws_arch}.zip" -o "awscliv2.zip" \
         && unzip awscliv2.zip \
-        && ./aws/install
+        && ./aws/install \
+        && rm -rf awscliv2.zip aws
 
 # Install SAM CLI
 RUN case "$TARGETARCH" in \
             amd64) sam_arch="x86_64" ;; \
-    arm64) sam_arch="arm64" ;; \
+            arm64) sam_arch="arm64" ;; \
             *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;; \
         esac \
         && wget "https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-${sam_arch}.zip" \
         && unzip "aws-sam-cli-linux-${sam_arch}.zip" -d sam-installation \
-        && ./sam-installation/install
+        && ./sam-installation/install \
+        && rm -rf "aws-sam-cli-linux-${sam_arch}.zip" sam-installation
 
 # Install Azure CLI (use Microsoft's universal install script to avoid distro repo issues)
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
