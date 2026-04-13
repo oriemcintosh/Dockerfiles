@@ -7,50 +7,40 @@ ARG TARGETARCH
 # Change Working Directory to Home
 WORKDIR /home
 
-# Run Updates
-RUN apt update
-
-# Install vim
-RUN apt install vim -y
-
-# Install git
-RUN apt install git -y
-
-# Install unzip
-RUN apt install unzip -y
-
-# Install jq
-RUN apt install jq -y
-
-# Install curl
-RUN apt install curl -y
-
-# Install wget
-RUN apt install wget -y
-
-# Install zsh
-RUN apt install zsh -y
-
-# Install Python3, pip, and Python3-venv
-RUN apt install python3 -y
-RUN apt install python3-pip -y
-RUN apt install python3-venv -y
+# Install base packages
+RUN apt-get update \
+    && apt-get install -y \
+        vim \
+        git \
+        unzip \
+        jq \
+        curl \
+        wget \
+        zsh \
+        python3 \
+        python3-pip \
+        python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install oh-my-zsh
 RUN RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 # Run upgrades
-RUN apt upgrade -y
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js LTS (system-wide) using official NodeSource GPG key and apt repository
-RUN apt install -y ca-certificates gnupg \
+RUN apt-get update \
+    && apt-get install -y ca-certificates gnupg \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
        | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
        > /etc/apt/sources.list.d/nodesource.list \
-    && apt update \
-    && apt install -y nodejs
+    && apt-get update \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
 # Make Downloads Folder
 RUN mkdir -p /downloads
