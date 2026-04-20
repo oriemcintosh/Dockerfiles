@@ -90,7 +90,9 @@ RUN case "$TARGETARCH" in \
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Install GitHub Copilot CLI system-wide for all users
-RUN curl -fsSL https://gh.io/copilot-install | bash
+RUN curl -fsSL https://gh.io/copilot-install -o /tmp/copilot-install.sh \
+    && bash /tmp/copilot-install.sh \
+    && rm -f /tmp/copilot-install.sh
 
 # Install Helm
 RUN case "$TARGETARCH" in \
