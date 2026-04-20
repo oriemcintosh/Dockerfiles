@@ -10,6 +10,7 @@ WORKDIR /home
 # Install base packages
 RUN apt-get update \
     && apt-get install -y \
+        --no-install-recommends \
         vim \
         git \
         unzip \
@@ -29,6 +30,21 @@ RUN RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubuserc
 RUN apt-get update \
     && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
+
+# Install GitHub CLI from the official Debian repository and keep the layer clean
+RUN apt-get update \
+     && apt-get install -y --no-install-recommends ca-certificates gnupg \
+     && install -m 0755 -d /etc/apt/keyrings \
+     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+         -o /tmp/githubcli-archive-keyring.gpg \
+     && install -m 0644 /tmp/githubcli-archive-keyring.gpg /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+     && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+         > /etc/apt/sources.list.d/github-cli.list \
+     && apt-get update \
+     && apt-get install -y --no-install-recommends gh \
+     && rm -f /tmp/githubcli-archive-keyring.gpg \
+     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js LTS (system-wide) using official NodeSource GPG key and apt repository
 RUN apt-get update \
@@ -72,6 +88,11 @@ RUN case "$TARGETARCH" in \
 
 # Install Azure CLI (use Microsoft's universal install script to avoid distro repo issues)
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# Install GitHub Copilot CLI system-wide for all users
+RUN curl -fsSL https://gh.io/copilot-install -o /tmp/copilot-install.sh \
+    && bash /tmp/copilot-install.sh \
+    && rm -f /tmp/copilot-install.sh
 
 # Install Helm
 RUN case "$TARGETARCH" in \
